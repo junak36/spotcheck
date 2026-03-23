@@ -531,8 +531,14 @@ canvas.sig {
 @media print {
   header { position: static; }
   .sec-body { display: block !important; }
-  .actions, .btn-group { display: none; }
+  .actions, .btn-group, .sig-clear, .btn-photo, #installBanner { display: none !important; }
   .comment-wrap { display: block !important; }
+  .dates-wrap { display: flex !important; }
+  /* Convert canvas signatures to images for print */
+  canvas.sig { display: none !important; }
+  .sig-print { display: block !important; }
+  .sig-box { border: 1px solid #ccc; border-radius: 8px; padding: 4px; }
+  .photo-thumb { width: 120px; height: 120px; }
 }
 </style>
 </head>
@@ -607,11 +613,13 @@ canvas.sig {
       <div class="sig-box">
         <label>Проверил</label>
         <canvas class="sig" id="sigInspector"></canvas>
+        <img class="sig-print" id="sigInspectorPrint" style="display:none;width:100%;height:90px;object-fit:contain;border:1px dashed var(--border);border-radius:8px;">
         <button class="sig-clear" onclick="clearSig('sigInspector')">изчисти</button>
       </div>
       <div class="sig-box">
         <label>Шофьор</label>
         <canvas class="sig" id="sigDriver"></canvas>
+        <img class="sig-print" id="sigDriverPrint" style="display:none;width:100%;height:90px;object-fit:contain;border:1px dashed var(--border);border-radius:8px;">
         <button class="sig-clear" onclick="clearSig('sigDriver')">изчисти</button>
       </div>
     </div>
@@ -1140,6 +1148,7 @@ function showToast(msg, err) {
 function initSig(canvasId) {
   const canvas = document.getElementById(canvasId);
   const ctx = canvas.getContext('2d');
+  const printImg = document.getElementById(canvasId + 'Print');
   let drawing = false;
 
   function resize() {
@@ -1162,19 +1171,25 @@ function initSig(canvasId) {
     return { x: src.clientX - rect.left, y: src.clientY - rect.top };
   }
 
+  function syncPrint() {
+    if (printImg) printImg.src = canvas.toDataURL('image/png');
+  }
+
   canvas.addEventListener('mousedown', e => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
   canvas.addEventListener('mousemove', e => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
-  canvas.addEventListener('mouseup', () => drawing = false);
-  canvas.addEventListener('mouseleave', () => drawing = false);
+  canvas.addEventListener('mouseup', () => { drawing = false; syncPrint(); });
+  canvas.addEventListener('mouseleave', () => { drawing = false; syncPrint(); });
   canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }, { passive: false });
   canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }, { passive: false });
-  canvas.addEventListener('touchend', () => drawing = false);
+  canvas.addEventListener('touchend', () => { drawing = false; syncPrint(); });
 }
 
 function clearSig(id) {
   const canvas = document.getElementById(id);
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const printImg = document.getElementById(id + 'Print');
+  if (printImg) printImg.src = '';
 }
 
 // ─── PWA SETUP ────────────────────────────────────────────────────────────────
